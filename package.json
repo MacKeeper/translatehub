@@ -5,10 +5,13 @@
   "version": "0.0.1",
   "dependencies": {
     "connect": "1.8.5",
-    "express": "2.5.2",
+    "express": "3.3.4",
+    "async": "0.2.9",
+    "eyes": "0.1.8",
     "jade": "0.20.0",
     "mongoose": "2.4.8",
-    "socket.io": "0.8.7"
+    "socket.io": "0.8.7",
+    "mysql": "2.0.0-alpha9"
   },
   "devDependencies": {
     "vows": "0.5.x",

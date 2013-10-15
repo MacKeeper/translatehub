@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>TranslateHub</title>
+
+    <script type="text/javascript" src="js/lib/jquery-1.10.2.min.js"></script>
+    <script type="text/javascript" src="js/lib/knockout-2.3.0.js"></script>
+</head>
+<body>
+
+Branch:
+<select data-bind="options: $root.availableBranches, value: selectedBranch, optionsText: 'name', click: $root.switchBranch"></select>
+
+<script type='text/javascript'>
+    /*<![CDATA[*/
+
+    function Branch(branch) {
+        this.name = ko.observable(branch.name);
+    }
+
+    // The view's data model
+    var ViewModel = function () {
+        var self = this
+
+        // Array of Branch
+        self.availableBranches = ko.observableArray([]);
+
+        self.selectedBranch = ko.observable();
+
+        // Load initial state from server
+        $.getJSON("/rest/branches", function (allData) {
+            self.availableBranches($.map(allData, function (branch) {
+                return new Branch(branch)
+            }));
+
+            // TODO Load last selected branch from cookie
+        });
+
+        self.selectedBranch.subscribe(function (newValue) {
+            alert("New branch is " + newValue.name());
+        });
+    };
+
+    ko.applyBindings(new ViewModel()); // This makes Knockout get to work
+    /*]]>*/
+</script>
+
+</body>
+</html>
