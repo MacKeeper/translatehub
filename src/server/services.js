@@ -26,7 +26,6 @@ exports.setupRoutes = function (app) {
         });
     });
 
-    // TODO Add support for untransalted
     // TODO Stream results
     app.get('/rest/keys/:branch', function (req, res) {
         var branch = req.params.branch
