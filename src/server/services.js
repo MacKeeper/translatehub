@@ -1,13 +1,11 @@
 var inspect = require('eyes').inspector({maxLength: false})
 var db = require('./db')
+var JSONStream = require('JSONStream')
 
 /**
  * Setup routes
  */
 exports.setupRoutes = function (app) {
-
-    // req.params.
-    // req.query.
 
     app.get('/rest/branches', function (req, res) {
         db.pool.getConnection(function (err, connection) {
@@ -15,18 +13,17 @@ exports.setupRoutes = function (app) {
             connection.query("select name from I18nRelease \
                               where deleted=false", function (err, rows) {
                 // And done with the connection.
-                connection.release();
+                connection.release()
 
                 if (err) {
                     res.send(500, err)
                 } else {
                     res.send(rows)
                 }
-            });
-        });
-    });
+            })
+        })
+    })
 
-    // TODO Stream results
     app.get('/rest/keys/:branch', function (req, res) {
         var branch = req.params.branch
         var locale = req.query.locale
@@ -40,17 +37,19 @@ exports.setupRoutes = function (app) {
 
         if (!branch) {
             res.send(400, "Require 'branch' defined by '/rest/keys/:branch'")
-            return;
+            return
         }
 
         db.pool.getConnection(function (err, connection) {
+            if (err) throw err;
+
             // Use the connection
-            var query = connection.query("select k.fullName, l.level, l.languageCode, l.countryCode, l.variant, v.value from I18nKeyEntity k\
+            var query = connection.query("select k.fullName, l.level localeLevel, l.languageCode localeLanguage, l.countryCode localeCountryCode, l.variant localeVariant, v.value from I18nKeyEntity k\
                               join I18nRelease r on k.release_id=r.id and r.name=?\
                               join I18nKeyValue v on v.keyEntity_id=k.id\
                               join I18nLocale l on v.locale_id=l.id " + (locale ? "and CONCAT_WS('_', l.languageCode, CASE l.countryCode WHEN '' THEN NULL ELSE l.countryCode END, CASE l.variant WHEN '' THEN NULL ELSE l.variant END) in (" + connection.escape(locale) + ") " : "") +
-                (untranslatedOnly ? "left join I18nKeyValue untranslatedValue on untranslatedValue.keyEntity_id=k.id ": "") +
-                "where k.translatable=true " + (includeDeletedKeys == true ? "" : "and k.deleted=false ") + (untranslatedOnly ? "and untranslatedValue.value is null ": "") +
+                (untranslatedOnly ? "left join I18nKeyValue untranslatedValue on untranslatedValue.keyEntity_id=k.id " : "") +
+                "where k.translatable=true " + (includeDeletedKeys == true ? "" : "and k.deleted=false ") + (untranslatedOnly ? "and untranslatedValue.value is null " : "") +
                 "order by k.fullName asc, l.level asc, l.languageCode asc", [branch], function (err, rows) {
 
                 // And done with the connection.
@@ -61,18 +60,22 @@ exports.setupRoutes = function (app) {
                 } else {
                     res.send(rows)
                 }
-            });
+            })
 
             console.log(query.sql)
-        });
-    });
+
+            // Stream results:
+            // query.stream({highWaterMark: 5}).pipe(JSONStream.stringify()).pipe(res)
+            // connection.release()
+        })
+    })
 
     app.get('/rest/locales/:branch', function (req, res) {
         var branch = req.params.branch
 
         if (!branch) {
             res.send(400, "Require 'branch' defined by '/rest/keys/:branch'")
-            return;
+            return
         }
 
         db.pool.getConnection(function (err, connection) {
@@ -83,16 +86,16 @@ exports.setupRoutes = function (app) {
                               where r.name=?\
                               order by level asc", [branch], function (err, rows) {
                 // And done with the connection.
-                connection.release();
+                connection.release()
 
                 if (err) {
                     res.send(500, err)
                 } else {
                     res.send(rows)
                 }
-            });
-        });
-    });
+            })
+        })
+    })
 
 }
 
@@ -145,7 +148,7 @@ exports.setupRoutes = function (app) {
 //        .on('close', function () {
 //            res.write(']')
 //            res.end()
-//        });
+//        })
 //
 //}
 

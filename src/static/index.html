@@ -4,18 +4,69 @@
     <title>TranslateHub</title>
 
     <script type="text/javascript" src="js/lib/jquery-1.10.2.min.js"></script>
+    <script type="text/javascript" src="js/lib/jquery.cookie.js"></script>
     <script type="text/javascript" src="js/lib/knockout-2.3.0.js"></script>
 </head>
 <body>
 
-Branch:
-<select data-bind="options: $root.availableBranches, value: selectedBranch, optionsText: 'name', click: $root.switchBranch"></select>
+<select data-bind="options: $root.availableBranches, value: selectedBranch, optionsText: 'name', click: $root.switchBranch, optionsCaption: 'Branch...'"></select>
+
+<button data-bind="click: test"></button>
+
+<br/><br/>
+
+<table>
+    <thead>
+    <tr>
+        <th>Key</th>
+        <th>Locale</th>
+        <th>Value</th>
+    </tr>
+    </thead>
+    <tbody data-bind="foreach: keys">
+    <tr>
+        <td data-bind="text: fullName"></td>
+        <td data-bind="text: locale.getLocale()"></td>
+        <td data-bind="text: value"></td>
+    </tr>
+    </tbody>
+</table>
 
 <script type='text/javascript'>
     /*<![CDATA[*/
 
     function Branch(branch) {
-        this.name = ko.observable(branch.name);
+        this.name = ko.observable(branch.name)
+    }
+
+    var localeCache = {};
+    function createLocale(localeLevel, localeLanguage, localeCountryCode, localeVariant) {
+        var fullLocale = [localeLevel, localeLanguage, localeCountryCode, localeVariant].filter(function (n) {
+            return n
+        }).join("_")
+        if (!(fullLocale in localeCache)) {
+            localeCache[fullLocale] = new Locale(localeLevel, localeLanguage, localeCountryCode, localeVariant)
+        }
+        return localeCache[fullLocale]
+    }
+
+    function Locale(localeLevel, localeLanguage, localeCountryCode, localeVariant) {
+        self.localeLevel = localeLevel
+        self.localeLanguage = localeLanguage
+        self.localeCountryCode = localeCountryCode
+        self.localeVariant = localeVariant
+    }
+
+    Locale.prototype.getLocale = function () {
+        [this.localeLanguage, this.localeCountryCode, this.localeVariant].filter(function (n) {
+            return n
+        }).join("_")
+    }
+
+    function I18nKey(key) {
+        this.fullName = key.fullName
+        this.locale = createLocale(key.localeLevel, key.localeLanguage, key.localeCountryCode, key.localeVariant)
+        this.value = ko.observable(key.value)
     }
 
     // The view's data model
@@ -23,25 +74,54 @@ Branch:
         var self = this
 
         // Array of Branch
-        self.availableBranches = ko.observableArray([]);
+        self.availableBranches = ko.observableArray([])
+        self.selectedBranch = ko.observable()
 
-        self.selectedBranch = ko.observable();
+        // Array of keys
+        self.keys = ko.observableArray([])
 
         // Load initial state from server
         $.getJSON("/rest/branches", function (allData) {
-            self.availableBranches($.map(allData, function (branch) {
-                return new Branch(branch)
-            }));
+            var requestedBranch = $.cookie('selectedBranch')
 
-            // TODO Load last selected branch from cookie
-        });
+            var branches = $.map(allData, function (branchData) {
+                return new Branch(branchData)
+            })
+            branches.sort(function (a, b) {
+                return a.name().localeCompare(b.name())
+            })
 
-        self.selectedBranch.subscribe(function (newValue) {
-            alert("New branch is " + newValue.name());
-        });
-    };
+            branches.forEach(function (branch) {
+                if (branch.name() == requestedBranch) {
+                    self.selectedBranch(branch)
+                }
+            })
+            self.availableBranches(branches)
+        })
 
-    ko.applyBindings(new ViewModel()); // This makes Knockout get to work
+        self.selectedBranch.subscribe(
+                function (newValue) {
+                    // Save cookie
+                    if (newValue) {
+                        $.cookie('selectedBranch', newValue.name())
+
+                        $.getJSON("/rest/keys/" + newValue.name() + "?untranslated=true", function (allData) {
+                            var keys = $.map(allData, function (keyData) {
+                                return new I18nKey(keyData)
+                            })
+                            self.keys(keys)
+                        })
+                    }
+                }
+        )
+
+
+        self.test = function () {
+
+        }
+    }
+
+    ko.applyBindings(new ViewModel()) // This makes Knockout get to work
     /*]]>*/
 </script>
 
