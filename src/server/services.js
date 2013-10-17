@@ -44,12 +44,12 @@ exports.setupRoutes = function (app) {
             if (err) throw err;
 
             // Use the connection
-            var query = connection.query("select k.fullName, l.level localeLevel, l.languageCode localeLanguage, l.countryCode localeCountryCode, l.variant localeVariant, v.value from I18nKeyEntity k\
+            var query = connection.query("select distinct k.fullName, l.level localeLevel, l.languageCode localeLanguage, l.countryCode localeCountryCode, l.variant localeVariant, v.value from I18nKeyEntity k\
                               join I18nRelease r on k.release_id=r.id and r.name=?\
                               join I18nKeyValue v on v.keyEntity_id=k.id\
                               join I18nLocale l on v.locale_id=l.id " + (locale ? "and CONCAT_WS('_', l.languageCode, CASE l.countryCode WHEN '' THEN NULL ELSE l.countryCode END, CASE l.variant WHEN '' THEN NULL ELSE l.variant END) in (" + connection.escape(locale) + ") " : "") +
-                (untranslatedOnly ? "left join I18nKeyValue untranslatedValue on untranslatedValue.keyEntity_id=k.id " : "") +
-                "where k.translatable=true " + (includeDeletedKeys == true ? "" : "and k.deleted=false ") + (untranslatedOnly ? "and untranslatedValue.value is null " : "") +
+                (untranslatedOnly ? "left join I18nKeyValue untranslatedValue on untranslatedValue.keyEntity_id=k.id join I18nLocale untranslatedValueLocale on untranslatedValue.locale_id=untranslatedValueLocale.id and untranslatedValueLocale.level!=0 " : "") +
+                "where k.translatable=true " + (includeDeletedKeys == true ? "" : "and k.deleted=false ") + (untranslatedOnly ? "and (untranslatedValue.value is null or untranslatedValue.value='') " : "") +
                 "order by k.fullName asc, l.level asc, l.languageCode asc", [branch], function (err, rows) {
 
                 // And done with the connection.
@@ -63,10 +63,6 @@ exports.setupRoutes = function (app) {
             })
 
             console.log(query.sql)
-
-            // Stream results:
-            // query.stream({highWaterMark: 5}).pipe(JSONStream.stringify()).pipe(res)
-            // connection.release()
         })
     })
 
@@ -98,57 +94,3 @@ exports.setupRoutes = function (app) {
     })
 
 }
-
-//exports.get_stations = function (req, res) {
-//
-//    model.Station.find({}).exec(function (err, stations) {
-//        if (err) {
-//            inspect(err)
-//            res.send(500)
-//        } else {
-//            res.send(stations)
-//        }
-//    })
-//}
-//
-//exports.get_station_status_history = function (req, res) {
-//
-//    var query = model.StationStatus.find()
-//        .where('stationid').equals(req.params.stationid)
-//        .sort('snapshotTimestamp')
-//
-//    // Bounded start?
-//    if (req.query.start) {
-//        query.where('snapshotTimestamp').gte(new Date(req.query.start))
-//    }
-//
-//    // Bounded end?
-//    if (req.query.end) {
-//        query.where('snapshotTimestamp').lte(new Date(req.query.end))
-//    }
-//
-//    res.status(200)
-//    res.type('application/json')
-//
-//    var datasent = false
-//    res.write('[')
-//    query.stream()
-//        .on('data', function (status) {
-//            if (datasent) {
-//                res.write(',')
-//            }
-//            res.write(JSON.stringify(status))
-//            datasent = true
-//        })
-//        .on('error', function (err) {
-//            inspect(err)
-//            res.status(500)
-//            res.end()
-//        })
-//        .on('close', function () {
-//            res.write(']')
-//            res.end()
-//        })
-//
-//}
-

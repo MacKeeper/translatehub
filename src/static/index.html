@@ -2,10 +2,6 @@
 <html>
 <head>
     <title>TranslateHub</title>
-
-    <script type="text/javascript" src="js/lib/jquery-1.10.2.min.js"></script>
-    <script type="text/javascript" src="js/lib/jquery.cookie.js"></script>
-    <script type="text/javascript" src="js/lib/knockout-2.3.0.js"></script>
 </head>
 <body>
 
@@ -15,7 +11,7 @@
 
 <br/><br/>
 
-<table>
+<table class="table table-striped table-condensed">
     <thead>
     <tr>
         <th>Key</th>
@@ -24,49 +20,66 @@
     </tr>
     </thead>
     <tbody data-bind="foreach: keys">
-    <tr>
-        <td data-bind="text: fullName"></td>
-        <td data-bind="text: locale.getLocale()"></td>
-        <td data-bind="text: value"></td>
+    <tr data-bind="css: { warning: !$data.hasValue() }">
+        <td><small data-bind="text: fullName"/></td>
+        <td><small data-bind="text: locale.getLocale()"/></td>
+        <td><input data-bind="value: value"/></td>
     </tr>
     </tbody>
 </table>
 
+<script type="text/javascript" src="js/lib/jquery-1.10.2.min.js"></script>
+<script type="text/javascript" src="js/lib/jquery.cookie.js"></script>
+<script type="text/javascript" src="js/lib/knockout-2.3.0.js"></script>
+
+<!-- Latest compiled and minified CSS -->
+<link rel="stylesheet" href="//netdna.bootstrapcdn.com/bootstrap/3.0.0/css/bootstrap.min.css">
+
+<!-- Optional theme -->
+<link rel="stylesheet" href="//netdna.bootstrapcdn.com/bootstrap/3.0.0/css/bootstrap-theme.min.css">
+
+<!-- Latest compiled and minified JavaScript -->
+<script src="//netdna.bootstrapcdn.com/bootstrap/3.0.0/js/bootstrap.min.js"></script>
+
 <script type='text/javascript'>
     /*<![CDATA[*/
 
-    function Branch(branch) {
-        this.name = ko.observable(branch.name)
+    function Branch( branch ) {
+        this.name = ko.observable( branch.name )
     }
 
     var localeCache = {};
-    function createLocale(localeLevel, localeLanguage, localeCountryCode, localeVariant) {
-        var fullLocale = [localeLevel, localeLanguage, localeCountryCode, localeVariant].filter(function (n) {
+    function createLocale( localeLevel, localeLanguage, localeCountryCode, localeVariant ) {
+        var fullLocale = [localeLevel, localeLanguage, localeCountryCode, localeVariant].filter(function ( n ) {
             return n
-        }).join("_")
-        if (!(fullLocale in localeCache)) {
-            localeCache[fullLocale] = new Locale(localeLevel, localeLanguage, localeCountryCode, localeVariant)
+        } ).join( "_" )
+        if ( !(fullLocale in localeCache) ) {
+            localeCache[fullLocale] = new Locale( localeLevel, localeLanguage, localeCountryCode, localeVariant )
         }
         return localeCache[fullLocale]
     }
 
-    function Locale(localeLevel, localeLanguage, localeCountryCode, localeVariant) {
-        self.localeLevel = localeLevel
-        self.localeLanguage = localeLanguage
-        self.localeCountryCode = localeCountryCode
-        self.localeVariant = localeVariant
+    function Locale( localeLevel, localeLanguage, localeCountryCode, localeVariant ) {
+        this.localeLevel = localeLevel
+        this.localeLanguage = localeLanguage
+        this.localeCountryCode = localeCountryCode
+        this.localeVariant = localeVariant
     }
 
     Locale.prototype.getLocale = function () {
-        [this.localeLanguage, this.localeCountryCode, this.localeVariant].filter(function (n) {
+        return [this.localeLanguage, this.localeCountryCode, this.localeVariant].filter(function ( n ) {
             return n
-        }).join("_")
+        } ).join( "_" )
     }
 
-    function I18nKey(key) {
+    function I18nKey( key ) {
         this.fullName = key.fullName
-        this.locale = createLocale(key.localeLevel, key.localeLanguage, key.localeCountryCode, key.localeVariant)
-        this.value = ko.observable(key.value)
+        this.locale = createLocale( key.localeLevel, key.localeLanguage, key.localeCountryCode, key.localeVariant )
+        this.value = ko.observable( key.value )
+    }
+
+    I18nKey.prototype.hasValue = function () {
+        return this.value() && this.value().trim() != ""
     }
 
     // The view's data model
@@ -74,54 +87,51 @@
         var self = this
 
         // Array of Branch
-        self.availableBranches = ko.observableArray([])
+        self.availableBranches = ko.observableArray( [] )
         self.selectedBranch = ko.observable()
 
         // Array of keys
-        self.keys = ko.observableArray([])
+        self.keys = ko.observableArray( [] )
 
         // Load initial state from server
-        $.getJSON("/rest/branches", function (allData) {
-            var requestedBranch = $.cookie('selectedBranch')
+        $.getJSON( "/rest/branches", function ( allData ) {
+            var requestedBranch = $.cookie( 'selectedBranch' )
 
-            var branches = $.map(allData, function (branchData) {
-                return new Branch(branchData)
-            })
-            branches.sort(function (a, b) {
-                return a.name().localeCompare(b.name())
-            })
+            var branches = $.map( allData, function ( branchData ) {
+                return new Branch( branchData )
+            } )
+            branches.sort( function ( a, b ) {
+                return a.name().localeCompare( b.name() )
+            } )
 
-            branches.forEach(function (branch) {
-                if (branch.name() == requestedBranch) {
-                    self.selectedBranch(branch)
+            branches.forEach( function ( branch ) {
+                if ( branch.name() == requestedBranch ) {
+                    self.selectedBranch( branch )
                 }
-            })
-            self.availableBranches(branches)
-        })
+            } )
+            self.availableBranches( branches )
+        } )
 
-        self.selectedBranch.subscribe(
-                function (newValue) {
-                    // Save cookie
-                    if (newValue) {
-                        $.cookie('selectedBranch', newValue.name())
+        self.selectedBranch.subscribe( function ( newValue ) {
+            // Save cookie
+            if ( newValue ) {
+                $.cookie( 'selectedBranch', newValue.name() )
 
-                        $.getJSON("/rest/keys/" + newValue.name() + "?untranslated=true", function (allData) {
-                            var keys = $.map(allData, function (keyData) {
-                                return new I18nKey(keyData)
-                            })
-                            self.keys(keys)
-                        })
-                    }
-                }
-        )
-
+                $.getJSON( "/rest/keys/" + newValue.name() + "?untranslated=true", function ( allData ) {
+                    var keys = $.map( allData, function ( keyData ) {
+                        return new I18nKey( keyData )
+                    } )
+                    self.keys( keys )
+                } )
+            }
+        } )
 
         self.test = function () {
 
         }
     }
 
-    ko.applyBindings(new ViewModel()) // This makes Knockout get to work
+    ko.applyBindings( new ViewModel() ) // This makes Knockout get to work
     /*]]>*/
 </script>
 
